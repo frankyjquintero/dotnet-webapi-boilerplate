@@ -8,9 +8,7 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET
@@ -20,6 +18,23 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore --configuration Release
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal --configuration Release
+    - name: Restore donettool
+      run: dotnet tool install --global dotnet-ef
+    - name: Start DBProvider MSSql
+      run: docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=sqlPw3$secure' -e 'MSSQL_PID=Developer' -p 1433:1433 --name mssql -d mcr.microsoft.com/mssql/server:2019-latest
+    - name: update database provider MSSQL
+      env:
+          DatabaseSettings__ConnectionString: "server=localhost,1433; User Id='SA'; Password='sqlPw3$secure'"
+          DatabaseSettings__DBProvider: "mssql"
+      working-directory: ./src/Host
+      run: |
+        export PATH="$PATH:$HOME/.dotnet/tools/"
+        dotnet-ef database update --no-build --configuration Release --project .././Migrators/Migrators.MSSQL/ --context TenantManagementDbContext
+        dotnet-ef database update --no-build --configuration Release --project .././Migrators/Migrators.MSSQL/ --context ApplicationDbContext
+    - name: Stop database provider
+      run: |
+            docker stop mssql
+            docker rm mssql
