@@ -38,3 +38,18 @@ jobs:
       run: |
             docker stop mssql
             docker rm mssql
+    - name: Start DBProvider PostgreSQL
+      run: docker run -e 'POSTGRES_PASSWORD=sqlPw3$secure' -e 'POSTGRES_USER=hero' -p 5432:5432 --name postgresql -d postgres
+    - name: update database provider PostgreSQL
+      env:
+          DatabaseSettings__ConnectionString: "User ID=hero;Password=sqlPw3$secure;Host=localhost;Port=5432;Database=fullStackHero"
+          DatabaseSettings__DBProvider: "postgresql"
+      working-directory: ./src/Host
+      run: |
+        export PATH="$PATH:$HOME/.dotnet/tools/"
+        dotnet-ef database update --no-build --configuration Release --project .././Migrators/Migrators.PostgreSQL/ --context TenantManagementDbContext
+        dotnet-ef database update --no-build --configuration Release --project .././Migrators/Migrators.PostgreSQL/ --context ApplicationDbContext
+    - name: Stop database provider PostgreSQL
+      run: |
+            docker stop postgresql
+            docker rm postgresql
