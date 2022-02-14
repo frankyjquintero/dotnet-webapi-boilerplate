@@ -1,6 +1,8 @@
 using System.Reflection;
 using FSH.WebApi.Infrastructure.Auth;
 using FSH.WebApi.Infrastructure.BackgroundJobs;
+using FSH.WebApi.Infrastructure.BackgroundJobs.RecurringJobs;
+using FSH.WebApi.Infrastructure.BackgroundJobs.RecurringJobs.Initialization;
 using FSH.WebApi.Infrastructure.Caching;
 using FSH.WebApi.Infrastructure.Common;
 using FSH.WebApi.Infrastructure.Cors;
@@ -46,6 +48,7 @@ public static class Startup
             .AddPersistence(config)
             .AddRequestLogging(config)
             .AddRouting(options => options.LowercaseUrls = true)
+            .AddRecurringBackgroundJobs()
             .AddServices();
     }
 
@@ -67,6 +70,14 @@ public static class Startup
 
         await scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>()
             .InitializeDatabasesAsync(cancellationToken);
+    }
+
+    public static async Task InitializeRecurringJobsAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        using var scope = services.CreateScope();
+
+        await scope.ServiceProvider.GetRequiredService<IRecurringJobInitialization>()
+            .InitializeJobsForTenantAsync(cancellationToken);
     }
 
     public static IApplicationBuilder UseInfrastructure(this IApplicationBuilder builder, IConfiguration config) =>
